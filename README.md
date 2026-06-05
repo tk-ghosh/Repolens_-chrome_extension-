@@ -307,7 +307,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ## 👨‍💻 Author
 
-**Tutul Kumar** — [@TutulDevs](https://github.com/TutulDevs)
+**Tutul Kumar ghosh** — [@TUTUL](https://github.com/tk-ghosh)
 
 ---
 
