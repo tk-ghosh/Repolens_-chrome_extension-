@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RepoLens</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 520px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #0f1729;
+      color: #e2e8f0;
+      font-size: 13px;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #0f1729; }
+    ::-webkit-scrollbar-thumb { background: #2a3a5c; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a4a6c; }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid #1a2540;
+      background: #080d1a;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: #0f1729;
+      border: 1px solid #FF6B35;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FF6B35;
+      font-weight: 700;
+      font-size: 12px;
+    }
+    .logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.3px;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .gear-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      color: #64748b;
+      font-size: 18px;
+      line-height: 1;
+      transition: background 0.2s, color 0.2s;
+    }
+    .gear-btn:hover { background: #1a2540; color: #FF6B35; }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #1a2540;
+      background: #080d1a;
+      overflow-x: auto;
+    }
+    .tab {
+      flex: 1;
+      min-width: 0;
+      padding: 10px 8px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .tab:hover { color: #94a3b8; background: rgba(255,107,53,0.04); }
+    .tab.active { color: #FF6B35; border-bottom-color: #FF6B35; background: rgba(255,107,53,0.06); }
+
+    .tab-content { display: none; padding: 16px; max-height: 420px; overflow-y: auto; }
+    .tab-content.active { display: block; }
+
+    .footer {
+      padding: 10px 16px;
+      border-top: 1px solid #1a2540;
+      text-align: center;
+      font-size: 11px;
+      color: #FF6B35;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      background: #080d1a;
+    }
+
+    .loading-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(15,23,41,0.95);
+      z-index: 100;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    .loading-overlay.show { display: flex; }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #1a2540;
+      border-top-color: #FF6B35;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-msg {
+      font-size: 14px;
+      color: #e2e8f0;
+      font-weight: 500;
+    }
+
+    .error-state {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .error-state.show { display: block; }
+    .error-icon { font-size: 40px; margin-bottom: 12px; }
+    .error-text { font-size: 14px; color: #94a3b8; margin-bottom: 16px; }
+    .error-detail { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+    .retry-btn, .primary-btn {
+      padding: 8px 20px;
+      background: #FF6B35;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .retry-btn:hover, .primary-btn:hover { background: #e55a2b; }
+
+    .not-repo {
+      display: none;
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .not-repo.show { display: block; }
+    .not-repo-icon { font-size: 48px; margin-bottom: 12px; }
+    .not-repo-text { font-size: 15px; color: #94a3b8; }
+
+    .no-key {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .no-key.show { display: block; }
+
+    .settings-panel {
+      display: none;
+      padding: 20px;
+      background: #0f1729;
+      position: absolute;
+      inset: 0;
+      z-index: 50;
+      overflow-y: auto;
+    }
+    .settings-panel.show { display: block; }
+    .settings-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 16px;
+    }
+    .settings-close {
+      background: none;
+      border: 1px solid #2a3a5c;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      color: #64748b;
+      float: right;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .settings-close:hover { color: #FF6B35; border-color: #FF6B35; }
+    .settings-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 6px;
+    }
+    .settings-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #1a2540;
+      border: 1px solid #2a3a5c;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 12px;
+      outline: none;
+      color: #e2e8f0;
+      transition: border-color 0.2s;
+    }
+    .settings-input:focus { border-color: #FF6B35; box-shadow: 0 0 0 2px rgba(255,107,53,0.15); }
+    .settings-input::placeholder { color: #475569; }
+    .settings-hint {
+      font-size: 11px;
+      color: #64748b;
+      margin-bottom: 16px;
+    }
+    .settings-hint a { color: #FF6B35; }
+    .save-btn {
+      padding: 10px 24px;
+      background: #FF6B35;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .save-btn:hover { background: #e55a2b; }
+    .save-success {
+      display: none;
+      color: #4ade80;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    .save-success.show { display: block; }
+
+    .repo-header { margin-bottom: 16px; }
+    .repo-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+      word-break: break-all;
+    }
+    .repo-desc {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+    .repo-meta {
+      display: flex;
+      gap: 16px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .repo-meta-item {
+      font-size: 11px;
+      color: #64748b;
+    }
+    .repo-meta-item strong { color: #FF6B35; }
+
+    .arch-diagram {
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      background: #1a2540;
+      border: 1px solid #2a3a5c;
+      border-radius: 8px;
+      padding: 14px 16px;
+      color: #e2e8f0;
+      white-space: pre-wrap;
+      word-break: break-all;
+      overflow-x: auto;
+    }
+
+    .file-list-simple {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .file-row {
+      padding: 8px 12px;
+      background: #1a2540;
+      border: 1px solid #2a3a5c;
+      border-radius: 8px;
+    }
+    .file-row-name {
+      font-weight: 600;
+      font-size: 13px;
+      color: #ffffff;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .file-row-desc {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 10px;
+      margin-top: 16px;
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    .file-tree {
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 12px;
+      background: #1a2540;
+      border: 1px solid #2a3a5c;
+      border-radius: 8px;
+      padding: 12px 16px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .tree-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1px 0;
+    }
+    .tree-indent { display: inline-block; }
+    .tree-icon { font-size: 12px; }
+    .tree-name { color: #e2e8f0; }
+    .tree-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 4px;
+      flex-shrink: 0;
+    }
+    .dot-blue { background: #58a6ff; }
+    .dot-yellow { background: #d29922; }
+    .dot-green { background: #3fb950; }
+    .dot-red { background: #f85149; }
+    .dot-gray { background: #64748b; }
+
+    .flow-box {
+      background: #1a2540;
+      border: 1px solid #2a3a5c;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 12px;
+      color: #e2e8f0;
+      word-break: break-all;
+    }
+    .flow-arrow { color: #FF6B35; margin: 0 4px; }
+
+    .summary-text {
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+
+    .file-list { display: flex; flex-direction: column; gap: 8px; }
+    .file-card {
+      padding: 10px 12px;
+      background: #1a2540;
+      border: 1px solid #2a3a5c;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .file-card:hover { background: #1f2d4a; }
+    .file-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .file-name {
+      font-weight: 600;
+      font-size: 13px;
+      color: #ffffff;
+    }
+    .file-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-high { background: rgba(63,185,80,0.15); color: #4ade80; }
+    .badge-medium { background: rgba(255,107,53,0.15); color: #FF6B35; }
+    .badge-low { background: rgba(100,116,139,0.2); color: #94a3b8; }
+    .file-role {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .file-detail-expanded {
+      display: none;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #2a3a5c;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .file-detail-expanded.show { display: block; }
+
+    .setup-guide { counter-reset: step; }
+    .setup-step {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+      align-items: flex-start;
+    }
+    .step-num {
+      width: 28px;
+      height: 28px;
+      background: #FF6B35;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step-text {
+      font-size: 13px;
+      color: #e2e8f0;
+      padding-top: 4px;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 12px;
+      background: #1a2540;
+      padding: 8px 12px;
+      border-radius: 6px;
+      width: 100%;
+      border: 1px solid #2a3a5c;
+    }
+    .setup-detect {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .detect-tag {
+      padding: 4px 10px;
+      background: #1a2540;
+      border: 1px solid #2a3a5c;
+      border-radius: 12px;
+      font-size: 11px;
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+    .detect-tag strong { color: #FF6B35; }
+
+    .func-list { display: flex; flex-direction: column; gap: 8px; }
+    .func-card {
+      padding: 10px 12px;
+      background: #1a2540;
+      border: 1px solid #2a3a5c;
+      border-radius: 8px;
+    }
+    .func-name {
+      font-weight: 600;
+      font-size: 13px;
+      color: #ffffff;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .func-explain {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .dep-list { display: flex; flex-direction: column; gap: 8px; }
+    .dep-card {
+      padding: 10px 12px;
+      background: #1a2540;
+      border: 1px solid #2a3a5c;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .dep-left { flex: 1; }
+    .dep-name {
+      font-weight: 600;
+      font-size: 13px;
+      color: #ffffff;
+    }
+    .dep-version {
+      font-size: 11px;
+      color: #64748b;
+      margin-left: 6px;
+    }
+    .dep-purpose {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .dep-right {
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+
+    .cache-badge {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      background: rgba(255,107,53,0.08);
+      border-bottom: 1px solid rgba(255,107,53,0.15);
+      font-size: 11px;
+      color: #FF6B35;
+    }
+    .cache-badge.show { display: flex; }
+    .cache-badge-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cache-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #4ade80;
+      display: inline-block;
+    }
+    .reanalyze-btn {
+      background: none;
+      border: 1px solid rgba(255,107,53,0.3);
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 10px;
+      color: #FF6B35;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 600;
+    }
+    .reanalyze-btn:hover { background: rgba(255,107,53,0.15); border-color: #FF6B35; }
+
+    .empty-state {
+      text-align: center;
+      padding: 30px 20px;
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    body { position: relative; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">RL</div>
+      <span class="logo-text">RepoLens</span>
+    </div>
+    <div class="header-actions">
+      <button class="gear-btn" id="settingsBtn" title="Settings">⚙</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabsContainer">
+    <button class="tab active" data-tab="tab-arch">Architecture</button>
+    <button class="tab" data-tab="tab-files">Files</button>
+    <button class="tab" data-tab="tab-setup">Setup</button>
+    <button class="tab" data-tab="tab-functions">Functions</button>
+    <button class="tab" data-tab="tab-deps">Dependencies</button>
+  </div>
+
+  <div class="cache-badge" id="cacheBadge">
+    <div class="cache-badge-left">
+      <span class="cache-dot"></span>
+      <span id="cacheLabel">Cached</span>
+    </div>
+    <button class="reanalyze-btn" id="reanalyzeBtn">🔄 Re-analyze</button>
+  </div>
+
+  <div class="tab-content active" id="tab-arch"></div>
+  <div class="tab-content" id="tab-files"></div>
+  <div class="tab-content" id="tab-setup"></div>
+  <div class="tab-content" id="tab-functions"></div>
+  <div class="tab-content" id="tab-deps"></div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-msg" id="loadingMsg">Fetching repository structure...</div>
+  </div>
+
+  <div class="error-state" id="errorState">
+    <div class="error-icon">⚠️</div>
+    <div class="error-text" id="errorText">Something went wrong</div>
+    <div class="error-detail" id="errorDetail"></div>
+    <button class="retry-btn" id="retryBtn">Retry</button>
+  </div>
+
+  <div class="not-repo" id="notRepo">
+    <div class="not-repo-icon">📂</div>
+    <div class="not-repo-text">Please navigate to a GitHub repository page to analyze it.</div>
+  </div>
+
+  <div class="no-key" id="noKey">
+    <div class="error-icon">🔑</div>
+    <div class="error-text">Please add your OpenRouter API key in settings to get started.</div>
+    <button class="primary-btn" id="openSettingsBtn">Open Settings</button>
+  </div>
+
+  <div class="settings-panel" id="settingsPanel">
+    <button class="settings-close" id="settingsClose">✕</button>
+    <div class="settings-title">Settings</div>
+    <label class="settings-label" for="apiKeyInput">OpenRouter API Key</label>
+    <input class="settings-input" type="password" id="apiKeyInput" placeholder="Enter your OpenRouter API key" />
+    <div class="settings-hint">Get a free API key at <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></div>
+
+    <label class="settings-label" for="githubTokenInput">GitHub Token (for repo access)</label>
+    <input class="settings-input" type="password" id="githubTokenInput" placeholder="ghp_xxxxxxxxxxxx" />
+    <div class="settings-hint">Optional — increases API rate limits for private repos.</div>
+
+    <button class="save-btn" id="saveKeyBtn">Save</button>
+    <div class="save-success" id="saveSuccess">✓ API key saved successfully!</div>
+  </div>
+
+  <div class="footer">RepoLens — BY Tutul Kumar</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
