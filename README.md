@@ -1,14 +1,8 @@
-# Touchless Music Controller
+# 🕵️ RepoLens — GitHub Repository Architecture Analyzer
 
-> **A Chrome extension that transforms how you interact with your music — touch-free, gesture-based, and powered by computer vision.**
+> **A Chrome extension that instantly analyzes any public GitHub repository and delivers a clear architectural breakdown — powered by AI.**
 
----
-
-## Overview
-
-Touchless Music Controller is a browser extension that uses your webcam to detect hand gestures, allowing you to control music playback without touching any device. Wave, swipe, or gesture in mid-air to play, pause, skip tracks, and adjust volume. Built with **MediaPipe Hands** for real-time hand tracking and trained gesture recognition models, it brings a futuristic, hygienic, and immersive way to control your music experience.
-
-**Note:** This repository contains the **RepoLens** analysis engine (a Chrome extension that analyzes GitHub repos using AI). The core gesture detection and music control logic is located in the `src/` directory, which is analyzed on the fly by RepoLens.
+Stop digging through unfamiliar repos. RepoLens fetches the file tree, reads key source files, and sends everything to an AI (via OpenRouter) which returns a structured analysis: architecture flow, file roles, setup instructions, key functions, and dependencies — all inside a clean popup.
 
 ---
 
@@ -16,37 +10,59 @@ Touchless Music Controller is a browser extension that uses your webcam to detec
 
 | Feature | Description |
 |---|---|
-| **Gesture Recognition** | Real-time hand landmark detection using MediaPipe |
-| **Play/Pause Control** | Open palm gesture toggles playback |
-| **Volume Adjustment** | Pinch gesture or vertical hand position controls volume |
-| **Track Navigation** | Swipe left/right for next/previous track |
-| **Browser Integration** | Works with YouTube Music, Spotify Web, and other web players |
-| **Visual Feedback** | On-screen overlay shows detected gestures and current action |
-| **Low Latency** | Optimized pipeline for near-instantaneous response |
-| **Privacy-First** | All webcam processing happens locally — no data leaves your machine |
+| **One-Click Analysis** | Click the extension icon on any GitHub repo — analysis starts automatically |
+| **AI-Powered Insights** | Uses OpenRouter AI (Gemini, Claude, GPT) to understand repo architecture |
+| **5 Analysis Views** | Architecture Flow, Files, Setup Guide, Functions, Dependencies |
+| **Auto File Tree** | Fetches the complete GitHub repo file tree via the GitHub API |
+| **Smart File Reading** | Automatically selects and reads the 5 most important files (README, package.json, main entry points, etc.) |
+| **24-Hour Caching** | Avoids redundant API calls — caches results locally for a full day |
+| **Dark Theme UI** | Sleek dark-mode popup with orange accent (`#FF6B35`) |
+| **Graceful Error Handling** | Clear error states, loading spinners, and empty-state fallbacks |
+| **Settings Panel** | Save your OpenRouter API key and optional GitHub token |
+| **Manifest V3** | Built on the latest Chrome extension platform |
+| **Keyboard Navigable** | Tab-based navigation for quick switching between views |
+
+---
+
+## 📸 Screenshots
+
+*(Add screenshots of the extension popup here)*
 
 ---
 
 ## 🧠 How It Works
 
-The extension follows a pipelined architecture:
-
-1. **Camera Capture** — Webcam feed is accessed via `getUserMedia()`
-2. **Hand Tracking** — MediaPipe Hands processes each frame to extract 21 hand landmarks
-3. **Gesture Classification** — A trained classifier (SVM/KNN/CNN) identifies the gesture from landmark coordinates
-4. **Action Mapping** — Each recognized gesture maps to a music control action (play, pause, next, prev, vol up/down)
-5. **DOM Injection** — The action is dispatched to the active music player tab via simulated keyboard shortcuts or API calls
-
 ```
-Camera Input → MediaPipe Hands → Landmark Extraction
-                                      ↓
-                              Gesture Classifier
-                                      ↓
-                           Action Mapper (Play/Pause/Skip/Vol)
-                                      ↓
-                           DOM / Keyboard Event Injection
-                                      ↓
-                           Music Player Responds
+You visit a GitHub repo → Click RepoLens icon
+                              │
+                    ┌─────────▼─────────┐
+                    │  content.js        │
+                    │  Extracts owner/   │
+                    │  repo from URL     │
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  background.js     │
+                    │  Fetches file tree │
+                    │  via GitHub API    │
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  popup.js          │
+                    │  Selects key files │
+                    │  Reads contents    │
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  OpenRouter AI     │
+                    │  Analyzes &        │
+                    │  returns JSON      │
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  Renders 5 Tabs   │
+                    │  Architecture │ Files │ Setup │ Functions │ Dependencies │
+                    └───────────────────┘
 ```
 
 ---
@@ -54,11 +70,12 @@ Camera Input → MediaPipe Hands → Landmark Extraction
 ## 📁 Project Structure
 
 ```
+RepoLens/
 ├── manifest.json          # Chrome Extension Manifest (V3)
-├── background.js          # Service worker — API orchestration
-├── content.js             # Content script — extracts repo info from GitHub
-├── popup.html             # Popup UI — dark-themed analysis dashboard
-├── popup.js               # Popup logic — caching, rendering, API calls
+├── background.js          # Service Worker — API orchestration
+├── content.js             # Content Script — extracts repo info
+├── popup.html             # Popup UI (520px, dark theme)
+├── popup.js               # Popup Logic — caching, AI, rendering
 ├── icon16.png             # Extension icon (16px)
 ├── icon48.png             # Extension icon (48px)
 ├── icon128.png            # Extension icon (128px)
@@ -67,120 +84,218 @@ Camera Input → MediaPipe Hands → Landmark Extraction
 
 ---
 
-## 🛠️ Core Components
+## 🗂️ File-by-File Breakdown
+
+### `manifest.json`
+The extension manifest (Manifest V3). Declares:
+- **Permissions:** `activeTab`, `scripting`, `storage`
+- **Host permissions:** `api.github.com`, `openrouter.ai`, `generativelanguage.googleapis.com`
+- **Content script:** Injects `content.js` on all `github.com/*/*` pages
+- **Service worker:** `background.js` handles all API calls
 
 ### `background.js`
-The service worker handles all external API communication:
-- **`fetchFileTree`** — Recursively fetches the GitHub repository file tree
-- **`fetchFileContents`** — Downloads contents of key files (base64 decoded)
-- **`analyzeWithGemini`** — Sends repository data to OpenRouter AI for architectural analysis
+The service worker — acts as an API proxy:
+- **`handleFetchFileTree`** — Calls `GET /repos/{owner}/{repo}/git/trees/HEAD?recursive=1` on GitHub API
+- **`handleFetchFileContents`** — Fetches individual file contents via `GET /repos/{owner}/{repo}/contents/{path}`, base64-decodes them, limits to 3000 chars each
+- **`handleAnalyzeWithGemini`** — Sends the prompt with file tree + contents to OpenRouter API (`/v1/chat/completions`), parses JSON from the AI response
 
-### `popup.js`
-The main popup logic manages the full analysis lifecycle:
-- **Caching** — Results are cached locally for 24 hours to avoid redundant API calls
-- **Smart file selection** — Prioritizes README, package.json, requirements.txt, and main entry files
-- **Tab-based rendering** — Architecture, Files, Setup, Functions, and Dependencies views
-- **Settings management** — API key and GitHub token persistence via `chrome.storage`
+### `content.js`
+Minimal content script — listens for a `getRepoInfo` message from the popup and parses the current GitHub URL to extract `owner` and `repo`.
 
 ### `popup.html`
-A 520px-wide popup with a slick dark theme (`#0f1729` background, orange `#FF6B35` accent). Includes:
-- Tab navigation header
-- Loading overlay with animated spinner
-- Error/empty states for graceful degradation
-- Settings panel with password fields
+A 520px-wide popup with embedded CSS. Features:
+- **Header:** Logo (`RL` icon) + RepoLens text + Settings gear button
+- **Tab bar:** Architecture | Files | Setup | Functions | Dependencies
+- **Tab content areas** (5 panels)
+- **Loading overlay** with animated spinner and progress messages
+- **Error state** with retry button
+- **"Not a repo" state** when user isn't on GitHub
+- **"No API key" state** with shortcut to settings
+- **Settings panel** with password fields for API key + GitHub token
+- **Cache badge** showing when results were last cached, with a re-analyze button
+
+### `popup.js`
+The main logic file (~576 lines). Key functions:
+
+| Function | Role |
+|---|---|
+| `startAnalysis()` | Orchestrates the full pipeline: fetch tree → fetch contents → AI → render |
+| `getRepoFromUrl()` | Resolves the current active tab's URL via `chrome.tabs.query` |
+| `fetchFileTree()` | Filters tree to blob-only entries, caps at 200 files, classifies types |
+| `fetchKeyFileContents()` | Smart selection — prioritizes README, package.json, requirements.txt, then main entry files, then other typed files |
+| `analyzeWithGemini()` | Builds a structured prompt asking for specific JSON output, sends to background |
+| `renderArchitecture()` | Shows repo header, architecture diagram, file categorization (INPUT/CORE/OUTPUT), and data flow |
+| `renderFiles()` | Lists all analyzed files with their roles |
+| `renderSetup()` | Shows detected language/framework/package manager + numbered setup steps |
+| `renderFunctions()` | Lists key functions/classes with explanations |
+| `renderDependencies()` | Shows dependencies with versions and purposes |
+| `checkCacheAndAnalyze()` | Checks local storage for cached analysis (< 24h old) |
+| `saveToCache()` | Persists analysis to `chrome.storage.local` |
 
 ---
 
 ## 🚀 Installation
 
 ### From Chrome Web Store
-1. *(Coming soon)*
+*(Coming soon)*
 
 ### Developer Mode (Manual Load)
-1. Clone the repository:
+1. Clone the repo:
    ```bash
-   git clone https://github.com/TutulDevs/Touchless_music_controler.git
+   git clone https://github.com/TutulDevs/repolens.git
    ```
 2. Open **chrome://extensions** in your browser
-3. Enable **Developer mode** (toggle in top-right)
+3. Enable **Developer mode** (toggle in top-right corner)
 4. Click **Load unpacked**
-5. Select the `Touchless_music_controler` folder
-6. Pin the extension to your toolbar for easy access
+5. Select the `repolens` folder
+6. Pin RepoLens to your toolbar
 
 ---
 
 ## ⚙️ Configuration
 
-### Get an API Key
-1. Visit [openrouter.ai/keys](https://openrouter.ai/keys) and sign up (free tier available)
-2. Copy your API key
-3. Click the extension icon → click the ⚙ **Settings** button
-4. Paste your OpenRouter API key
-5. *(Optional)* Add a GitHub token for higher API rate limits or private repo access
+### 1. Get an OpenRouter API Key
+- Visit [openrouter.ai/keys](https://openrouter.ai/keys)
+- Sign up (free tier available with daily credits)
+- Copy your API key
 
-### Using the Extension
-1. Navigate to any public GitHub repository (e.g., `github.com/user/repo`)
-2. Click the RepoLens extension icon
-3. The extension will automatically:
-   - Detect the repository URL
-   - Fetch the complete file tree
-   - Read key source files
-   - Send everything to AI for analysis
-4. Explore results across 5 tabs:
-   - **Architecture** — Flow diagram, file structure, and data flow
-   - **Files** — Categorized list of files with descriptions
-   - **Setup** — Language/framework detection + step-by-step setup guide
-   - **Functions** — Key functions and classes explained
-   - **Dependencies** — Packages with version and purpose
+### 2. Configure the Extension
+1. Navigate to any GitHub repository page
+2. Click the RepoLens icon in your toolbar
+3. Click the **⚙ Settings** button (top-right of popup)
+4. Paste your OpenRouter API key
+5. *(Optional)* Add a **GitHub personal access token** for:
+   - Higher API rate limits (60 → 5000 req/hr)
+   - Access to private repositories
+6. Click **Save**
+
+### 3. Analyze Any Repo
+1. Go to any GitHub repo (e.g., `github.com/facebook/react`)
+2. Click the RepoLens icon
+3. Wait ~5-15 seconds while it:
+   - Fetches the file tree
+   - Reads key files
+   - Sends to AI for analysis
+4. Explore the 5 tabs!
 
 ---
 
-## 💡 Gesture Controls (Music Player)
+## 📋 Analysis Tabs Explained
 
-| Gesture | Action | Works On |
-|---|---|---|
-| ✋ Open Palm | Play / Pause | YouTube Music, Spotify, SoundCloud |
-| 👆 Index Point Up | Volume Up | YouTube Music, Spotify |
-| 👇 Index Point Down | Volume Down | YouTube Music, Spotify |
-| 👈 Swipe Left | Previous Track | YouTube Music, Spotify |
-| 👉 Swipe Right | Next Track | YouTube Music, Spotify |
-| 🤏 Pinch | Toggle Mute | YouTube Music, Spotify |
+### 🏗️ Architecture Tab
+- **Repo header** with owner/name, summary, language, framework, file count
+- **Architecture Flow** — ASCII diagram showing the project's pipeline
+- **File Structure** — Files grouped as INPUT / CORE / OUTPUT
+- **Data Flow** — Arrow-based flow showing how data moves through the system
 
-*Integration with specific music streaming services can be customized in `src/actions.js`.*
+### 📄 Files Tab
+A clean list of analyzed files with:
+- File name
+- Project-specific description of what the file does
+
+### 🔧 Setup Tab
+- **Detected tags** — Language, Framework, Package Manager
+- **Install command** (e.g., `npm install`, `pip install -r requirements.txt`)
+- **Run command**
+- **Numbered setup steps** for getting started
+
+### ⚡ Functions Tab
+Lists key functions and classes found in the repository, each with a detailed explanation of their purpose within the project.
+
+### 📦 Dependencies Tab
+Shows detected packages with:
+- Package name & version
+- Project-specific purpose description
 
 ---
 
 ## 🧪 Development
 
 ```bash
-# No build step required — the extension is plain HTML/CSS/JS
-# Make changes to source files and reload the extension at chrome://extensions
+# No build step required — it's plain HTML/CSS/JS
+# Edit files directly, then reload at chrome://extensions
 ```
 
-### Testing
-Load the extension in developer mode (see Installation) and test on any GitHub repository.
+### Making Changes
+1. Edit the relevant file (`popup.js`, `popup.html`, `background.js`, `content.js`)
+2. Go to `chrome://extensions`
+3. Click the **↻ Reload** button on RepoLens
+4. Click the extension icon to test
 
 ---
 
-## 📦 Dependencies
+## 🌐 API Reference
 
-| Package | Version | Purpose |
-|---|---|---|
-| OpenRouter AI API | — | AI-powered architecture analysis of GitHub repos |
-| GitHub REST API | v3 | Fetch repository file trees and file contents |
-| Chrome Extensions API | Manifest V3 | Extension lifecycle, messaging, storage |
+### GitHub REST API v3
+- **GET** `/repos/{owner}/{repo}/git/trees/HEAD?recursive=1` — Fetch complete file tree
+- **GET** `/repos/{owner}/{repo}/contents/{path}` — Fetch individual file content
+
+### OpenRouter API
+- **POST** `/api/v1/chat/completions` — Send analysis prompt to AI
+- Uses `openrouter/auto` model selection with `free-models-only` preset
+
+---
+
+## 🔒 Privacy
+
+- **No data leaves your browser** except:
+  - Repository metadata sent to GitHub API (public data)
+  - File tree + file contents sent to OpenRouter for AI analysis
+  - Your API keys are stored locally in `chrome.storage.local`
+- **No tracking, no analytics, no third-party cookies**
+- **OpenRouter API key never sent anywhere except OpenRouter**
+
+---
+
+## 🐛 Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| "Not a GitHub repository" | Navigate to a repo URL like `github.com/user/repo` |
+| "API key required" | Open Settings (⚙) and add your OpenRouter API key |
+| "Failed to fetch" | The repo may be empty or the GitHub API rate-limited. Add a GitHub token in Settings. |
+| "AI analysis failed" | The AI may have returned malformed JSON. Click Retry. |
+| "Cached" badge showing | Results from the last 24h — click "Re-analyze" for fresh analysis |
+
+---
+
+## 🛣️ Roadmap
+
+- [ ] **Multi-model support** — Choose between Gemini, Claude, GPT models
+- [ ] **Export analysis** — Download as Markdown or JSON
+- [ ] **Compare repos** — Side-by-side architecture comparison
+- [ ] **Custom prompts** — Let users ask specific questions about the repo
+- [ ] **Chrome Web Store release**
+- [ ] **Firefox / Edge support**
+- [ ] **Dark/light theme toggle**
+- [ ] **i18n support**
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! If you'd like to improve gesture recognition accuracy, add support for more music platforms, or enhance the UI:
+Contributions are welcome! Here's how to get started:
 
-1. Fork the repo
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+1. Fork the repository
+2. Create a feature branch:
+   ```bash
+   git checkout -b feature/your-awesome-feature
+   ```
+3. Commit your changes:
+   ```bash
+   git commit -m "Add your awesome feature"
+   ```
+4. Push to your branch:
+   ```bash
+   git push origin feature/your-awesome-feature
+   ```
 5. Open a Pull Request
+
+### Development Guidelines
+- Follow the existing code style (no comments, concise patterns)
+- Test on at least 3 different GitHub repos before submitting
+- Keep the popup under 520px width
+- Maintain graceful error/loading/empty states
 
 ---
 
@@ -198,7 +313,10 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ## 🙏 Acknowledgments
 
-- [MediaPipe](https://mediapipe.dev/) for real-time hand tracking
-- [OpenRouter](https://openrouter.ai/) for accessible AI model APIs
-- [GitHub API](https://docs.github.com/en/rest) for repository data
-- All contributors and testers who helped refine the gesture models
+- [OpenRouter](https://openrouter.ai/) — Accessible AI model API with free tier
+- [GitHub API](https://docs.github.com/en/rest) — Repository data access
+- [Chrome Extensions Documentation](https://developer.chrome.com/docs/extensions/) — Manifest V3 platform
+
+---
+
+*Made with ❤️ for developers who want to understand code faster.*
