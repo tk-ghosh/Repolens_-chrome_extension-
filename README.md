@@ -1,6 +1,6 @@
 # 🕵️ RepoLens — GitHub Repository Architecture Analyzer
 
-> **A Chrome extension that instantly analyzes any public GitHub repository and delivers a clear architectural breakdown — powered by AI.**
+> **A Chrome extension that instantly analyzes any public GitHub repository and delivers a clear architectural breakdown**
 
 Stop digging through unfamiliar repos. RepoLens fetches the file tree, reads key source files, and sends everything to an AI (via OpenRouter) which returns a structured analysis: architecture flow, file roles, setup instructions, key functions, and dependencies — all inside a clean popup.
 
